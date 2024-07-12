@@ -1,15 +1,22 @@
 from tkinter import *
+from pandas import DataFrame
 import pandas as pd
 import random
 
+
 BACKGROUND_COLOR = "#B1DDC6"
-
-# Load the data
-data = pd.read_csv("data/french_words.csv")
-to_learn = data.to_dict(orient="records")
-
 current_card = {}
 flip_timer = None
+
+# Load the data
+try:
+    data = pd.read_csv("data/words_to_learn.csv")
+except FileNotFoundError:
+    original_data = pd.read_csv("data/french_words.csv")
+    original_data.to_csv("data/words_to_learn.csv", index=False)
+    data = original_data
+
+to_learn = data.to_dict(orient="records")
 
 
 def next_card():
@@ -17,19 +24,29 @@ def next_card():
     if flip_timer:
         window.after_cancel(flip_timer)
 
-    # Select a random word from the list
-    current_card = random.choice(to_learn)
-    canvas.itemconfig(card_title, text="French", fill="black")
-    canvas.itemconfig(card_word, text=current_card["French"], fill="black")
-    canvas.itemconfig(front_image, image=card_front_img)
-    # Schedule the flip to occur after 3 seconds
-    flip_timer = window.after(3000, flip_cards)
+    if to_learn:
+        # Select a random word from the list
+        current_card = random.choice(to_learn)
+        canvas.itemconfig(card_title, text="French", fill="black")
+        canvas.itemconfig(card_word, text=current_card["French"], fill="black")
+        canvas.itemconfig(front_image, image=card_front_img)
+        # Schedule the flip to occur after 3 seconds
+        flip_timer = window.after(3000, flip_cards)
+    else:
+        canvas.itemconfig(card_title, text="Congratulations!", fill="black")
+        canvas.itemconfig(card_word, text="You've learned all the words!", fill="black")
 
 
 def flip_cards():
     canvas.itemconfig(front_image, image=card_back_img)
     canvas.itemconfig(card_title, text="English", fill="white")
     canvas.itemconfig(card_word, text=current_card["English"], fill="white")
+
+
+def known_word():
+    to_learn.remove(current_card)
+    DataFrame(to_learn).to_csv("data/words_to_learn.csv", index=False)
+    next_card()
 
 
 # Initialize the window
@@ -57,7 +74,7 @@ unknown_button.grid(row=1, column=0, pady=30)
 
 check_image = PhotoImage(file="images/right.png")
 known_button = Button(image=check_image, highlightthickness=0, bg=BACKGROUND_COLOR, activebackground=BACKGROUND_COLOR,
-                      borderwidth=0, command=next_card)
+                      borderwidth=0, command=known_word)
 known_button.grid(row=1, column=1, pady=30)
 
 # Start with the first card
